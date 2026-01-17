@@ -1,6 +1,6 @@
 # MacExplore
 
-A lightweight macOS utility for browsing and cleaning up files on your system.
+A lightweight macOS utility for browsing and cleaning up files on your system. Designed to help remove leftover files and system bloat in a way similar to tools like windows Revo Uninstaller.
 
 ## Screenshots
 
@@ -15,6 +15,7 @@ A lightweight macOS utility for browsing and cleaning up files on your system.
 - **Quick File Browser** - Browse Applications, Desktop, Documents, Downloads, and more
 - **Browser Data Cleanup** - View and manage Safari, Chrome, Firefox, Arc, and Brave cache/data
 - **Trash Management** - View, restore, or permanently delete items in Trash
+- **Bloat & Leftover Cleanup** - Find and remove leftover files, caches, and unused data left behind by apps
 - **Custom Folders** - Add any folder to the sidebar for quick access
 - **File Search** - Filter items by name across any category
 - **Drag Selection** - Select multiple files by dragging
