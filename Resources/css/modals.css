@@ -1,0 +1,196 @@
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+}
+
+.modal-overlay.show {
+    display: flex;
+}
+
+.modal {
+    background: #1a1a1a;
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    width: 600px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    padding: 24px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.modal-title {
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.modal-close {
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: var(--bg-card);
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 18px;
+}
+
+.modal-close:hover {
+    background: var(--bg-card-hover);
+}
+
+.modal-body {
+    padding: 24px 28px;
+    overflow-y: auto;
+    flex: 1;
+}
+
+.modal-section {
+    margin-bottom: 24px;
+}
+
+.modal-section:last-child {
+    margin-bottom: 0;
+}
+
+.modal-section-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--text-tertiary);
+    margin-bottom: 16px;
+    padding-top: 8px;
+}
+
+.file-item {
+    padding: 12px 16px;
+    background: var(--bg-card);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.file-item:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.file-path {
+    font-size: 12px;
+    color: var(--text-secondary);
+    font-family: 'SF Mono', monospace;
+    word-break: break-all;
+}
+
+.file-size {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-variant-numeric: tabular-nums;
+    margin-left: 16px;
+    white-space: nowrap;
+}
+
+.modal-note {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 24px;
+}
+
+.context-menu {
+    position: fixed;
+    background: #2a2a2a;
+    border: 1.5px solid #3a3a3a;
+    border-radius: 8px;
+    padding: 6px;
+    z-index: 1000;
+    min-width: 200px;
+}
+
+.context-menu-item {
+    padding: 10px 14px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text-primary);
+    transition: background 0.1s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.context-menu-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.confirm-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 2999;
+    animation: fadeIn 0.2s ease;
+}
+
+.confirm-dialog {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #1a1a1a;
+    border: 1.5px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    z-index: 3000;
+    min-width: 400px;
+    display: none;
+}
+
+.confirm-dialog.show {
+    display: block;
+}
+
+.confirm-title {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.confirm-message {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 24px;
+    line-height: 1.5;
+    white-space: pre-line;
+}
+
+.confirm-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-end;
+}

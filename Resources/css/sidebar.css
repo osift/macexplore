@@ -1,0 +1,254 @@
+.sidebar {
+    width: 260px;
+    min-width: 260px; 
+    max-width: 260px; 
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0; 
+}
+
+.sidebar-header {
+    padding: 32px 24px 24px;
+    border-bottom: 1px solid var(--border);
+}
+
+.app-logo-link {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+    margin-bottom: 4px;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.app-logo-link:hover {
+    opacity: 0.8;
+}
+
+.app-logo-link:hover .external-link-icon {
+    opacity: 1;
+    transform: translateX(2px) translateY(-2px);
+}
+
+.app-logo {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    color: var(--text-primary);
+}
+
+.external-link-icon {
+    opacity: 0.4;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    fill: currentColor;
+    color: var(--text-primary);
+}
+
+.external-link-icon path {
+    fill: currentColor;
+}
+
+.app-tagline {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.sidebar-stats {
+    padding: 20px 24px;
+    background: rgba(255, 255, 255, 0.02);
+    margin: 20px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.stat {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    font-size: 13px;
+}
+
+.stat-label {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+.stat-value {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.sidebar-nav {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px;
+}
+
+.nav-group {
+    margin-bottom: 24px;
+}
+
+.nav-group-title {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 0 12px 8px;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 2px;
+    min-width: 0; 
+    width: 100%; 
+    box-sizing: border-box; 
+}
+
+.nav-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--text-primary);
+    transform: translateX(2px);
+}
+
+.nav-item:active {
+    background: rgba(255, 255, 255, 0.08);
+    transform: scale(0.98);
+}
+
+.nav-item.active {
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-primary);
+    border-left: 3px solid rgba(255, 255, 255, 0.6);
+    padding-left: 9px;
+}
+
+.nav-icon {
+    width: 18px;
+    height: 18px;
+    opacity: 0.8;
+}
+
+.nav-icon svg {
+    width: 100%;
+    height: 100%;
+}
+
+.nav-count {
+    margin-left: auto;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text-tertiary);
+    font-variant-numeric: tabular-nums;
+}
+
+.nav-item.active .nav-count {
+    color: var(--text-primary);
+}
+
+.nav-remove {
+    opacity: 0;
+    font-size: 18px;
+    color: var(--text-tertiary);
+    cursor: pointer;
+    padding: 0 8px;
+    transition: all 0.2s;
+}
+
+.nav-item:hover .nav-remove {
+    opacity: 1;
+}
+
+.nav-remove:hover {
+    color: var(--danger);
+    transform: scale(1.2);
+}
+
+.nav-item[onclick*="addCustomFolder"] {
+    cursor: pointer;
+}
+
+.nav-item[onclick*="addCustomFolder"]:hover {
+    background: transparent !important;
+}
+
+.nav-item[onclick*="addCustomFolder"]:active {
+    background: transparent !important;
+}
+
+.nav-item[onclick*="addCustomFolder"].active {
+    background: transparent !important;
+}
+
+.storage-bar {
+    padding: 20px 24px;
+    background: rgba(255, 255, 255, 0.02);
+    margin: 0 16px 20px;
+    border-radius: 8px;
+    border: 1.5px solid var(--border);
+}
+
+.storage-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.storage-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+}
+
+.storage-value {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.storage-progress {
+    height: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 8px;
+}
+
+.storage-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #666 0%, #888 100%);
+    border-radius: 3px;
+    transition: width 0.5s ease;
+    width: 0%;
+}
+
+.storage-details {
+    font-size: 11px;
+    color: var(--text-tertiary);
+    text-align: center;
+}
+
+.storage-details span {
+    color: var(--text-secondary);
+    font-weight: 600;
+}

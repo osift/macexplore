@@ -1,0 +1,16 @@
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+    --bg-app: #0f0f0f;
+    --bg-sidebar: #1a1a1a;
+    --bg-content: #0f0f0f;
+    --bg-card: #1e1e1e;
+    --bg-card-hover: #252525;
+    --text-primary: #e8e8e8;
+    --text-secondary: #8b8b8b;
+    --text-tertiary: #5c5c5c;
+    --border: #2a2a2a;
+    --accent: #666666;
+    --accent-hover: #777777;
+    --danger: #8b8b8b;
+}

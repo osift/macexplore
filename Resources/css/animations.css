@@ -1,0 +1,39 @@
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(30px) scale(0.95);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0) scale(1);
+        opacity: 1;
+    }
+}
+
+.alert-overlay {
+    animation: fadeIn 0.2s ease;
+}
+
+.alert-dialog {
+    animation: slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.modal-overlay {
+    animation: fadeIn 0.2s ease;
+}
+
+.modal {
+    animation: slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.confirm-dialog {
+    animation: slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}

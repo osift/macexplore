@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html style="background: #0f0f0f;">
+<head>
+    <meta charset="UTF-8">
+    <title>MacExplore</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        html, body {
+            background: #0f0f0f !important;
+            margin: 0;
+            padding: 0;
+        }
+
+        /* c */
+
+        #appLoader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: #0f0f0f;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 99999;
+            transition: opacity 0.3s ease;
+        }
+
+        #appLoader.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .loader-content {
+            text-align: center;
+        }
+
+        .loader-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: rgba(255, 255, 255, 0.4);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loader-text {
+            font-family: 'Inter', -apple-system, sans-serif;
+            font-size: 13px;
+            color: rgba(255, 255, 255, 0.4);
+            font-weight: 500;
+        }
+    </style>
+</head>
+<body style="background: #0f0f0f;">
+    <div id="appLoader">
+        <div class="loader-content">
+            <div class="loader-spinner"></div>
+            <div class="loader-text">Loading MacExplore...</div>
+        </div>
+    </div>
+    <div class="app">
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <div class="app-logo-link" onclick="window.open('https://MacExplore.com', '_blank')">
+                    <div class="app-logo">MacExplore</div>
+                    <svg class="external-link-icon" width="14" height="14" viewBox="0 0 24 24">
+                        <path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/>
+                    </svg>
+                </div>
+                <div class="app-tagline">System Cleanup</div>
+            </div>
+        <div class="sidebar-stats">
+            <div class="stat">
+                <span class="stat-label">Total Items</span>
+                <span class="stat-value" id="totalItems">0</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Selected</span>
+                <span class="stat-value" id="selectedCount">0</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Total Size</span>
+                <span class="stat-value" id="totalSize">0 B</span>
+            </div>
+        </div>
+
+        <div class="storage-bar">
+            <div class="storage-header">
+                <span class="storage-label">Storage</span>
+                <span class="storage-value" id="storageAvailable">Loading...</span>
+            </div>
+            <div class="storage-progress">
+                <div class="storage-fill" id="storageFill"></div>
+            </div>
+            <div class="storage-details">
+                <span id="storageUsed">0 GB</span> of <span id="storageTotal">0 GB</span> used
+            </div>
+        </div>
+
+        <div class="sidebar-nav">
+            <div class="nav-group">
+                <div class="nav-group-title">Files</div>
+                <div class="nav-item" onclick="switchPreset('all', event)">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+                    </span>
+                    All Items
+                    <span class="nav-count" id="count-all">0</span>
+                </div>
+                <div class="nav-item active" onclick="switchPreset('applications', event)">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>
+                    </span>
+                    Applications
+                    <span class="nav-count" id="count-applications">0</span>
+                </div>
+                <div class="nav-item" onclick="switchPreset('desktop', event)">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M21 2H3c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h7v2H8v2h8v-2h-2v-2h7c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 14H3V4h18v12z"/></svg>
+                    </span>
+                    Desktop
+                    <span class="nav-count" id="count-desktop">0</span>
+                </div>
+                <div class="nav-item" onclick="switchPreset('documents', event)">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
+                    </span>
+                    Documents
+                    <span class="nav-count" id="count-documents">0</span>
+                </div>
+                <div class="nav-item" onclick="switchPreset('downloads', event)">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+                    </span>
+                    Downloads
+                    <span class="nav-count" id="count-downloads">0</span>
+                </div>
+                <div class="nav-item" onclick="switchPreset('launch_agents', event)">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19.14 12.94c.04-.3.06-.61.06-.94 0-.32-.02-.64-.07-.94l2.03-1.58c.18-.14.23-.41.12-.61l-1.92-3.32c-.12-.22-.37-.29-.59-.22l-2.39.96c-.5-.38-1.03-.7-1.62-.94l-.36-2.54c-.04-.24-.24-.41-.48-.41h-3.84c-.24 0-.43.17-.47.41l-.36 2.54c-.59.24-1.13.57-1.62.94l-2.39-.96c-.22-.08-.47 0-.59.22L2.74 8.87c-.12.21-.08.47.12.61l2.03 1.58c-.05.3-.07.62-.07.94s.02.64.07.94l-2.03 1.58c-.18.14-.23.41-.12.61l1.92 3.32c.12.22.37.29.59.22l2.39-.96c.5.38 1.03.7 1.62.94l.36 2.54c.05.24.24.41.48.41h3.84c.24 0 .44-.17.47-.41l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.47 0 .59-.22l1.92-3.32c.12-.22.07-.47-.12-.61l-2.01-1.58zM12 15.6c-1.98 0-3.6-1.62-3.6-3.6s1.62-3.6 3.6-3.6 3.6 1.62 3.6 3.6-1.62 3.6-3.6 3.6z"/></svg>
+                    </span>
+                    Startup
+                    <span class="nav-count" id="count-launch_agents">0</span>
+                </div>
+                <div class="nav-item" onclick="switchPreset('binaries', event)">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.4 16.6L4.8 12l4.6-4.6L8 6l-6 6 6 6 1.4-1.4zm5.2 0l4.6-4.6-4.6-4.6L16 6l6 6-6 6-1.4-1.4z"/></svg>
+                    </span>
+                    Binaries
+                    <span class="nav-count" id="count-binaries">0</span>
+                </div>
+                <div class="nav-item" onclick="addCustomFolder(event)" style="color: var(--accent); opacity: 0.8;">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/>
+                        </svg>
+                    </span>
+                    Add Folder
+                </div>
+                <div id="customFoldersContainer"></div>
+            </div>
+
+            <div class="nav-group">
+                <div class="nav-group-title">Browser Data</div>
+                <div class="nav-item" onclick="switchPreset('browsers', event)">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+                    </span>
+                    Browsers
+                    <span class="nav-count" id="count-browsers">0</span>
+                </div>
+            </div>
+
+            <div class="nav-group">
+                <div class="nav-group-title">System</div>
+                <div class="nav-item" onclick="switchPreset('trash', event)">
+                    <span class="nav-icon">
+                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                    </span>
+                    Trash
+                    <span class="nav-count" id="count-trash">0</span>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="toolbar">
+            <div class="toolbar-title" id="toolbarTitle">All Items</div>
+            <div class="toolbar-actions">
+                <select class="sort-select" id="sortSelect" onchange="sortItems(this.value)">
+                    <option value="name-asc">Name (A-Z)</option>
+                    <option value="name-desc">Name (Z-A)</option>
+                    <option value="size-desc">Size (Largest)</option>
+                    <option value="size-asc">Size (Smallest)</option>
+                    <option value="date-desc">Date (Newest)</option>
+                    <option value="date-asc">Date (Oldest)</option>
+                    <option value="type">Type</option>
+                </select>
+                <div class="search-wrap">
+                    <svg class="search-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                    <input type="text" id="searchInput" class="search" placeholder="Search items..." oninput="filterItems(this.value)" tabindex="1" autocomplete="off" spellcheck="false">
+                </div>
+                <button class="btn" onclick="selectAll()">Select All</button>
+                <button class="btn" onclick="deselectAll()">Deselect All</button>
+                <button class="btn" onclick="scanSystem()">Scan</button>
+                <button class="btn btn-danger" id="deleteBtn" onclick="window.deleteSelected()" style="display: none;">Delete</button>
+            </div>
+        </div>
+
+        <div class="content" style="position: relative;">
+            <div id="loadingState" class="loading-state">
+                <!-- Skeleton cards for loading - only show a few rows -->
+                <div class="skeleton-card"><div class="skeleton-icon"></div><div class="skeleton-text"></div><div class="skeleton-text small"></div></div>
+                <div class="skeleton-card"><div class="skeleton-icon"></div><div class="skeleton-text"></div><div class="skeleton-text small"></div></div>
+                <div class="skeleton-card"><div class="skeleton-icon"></div><div class="skeleton-text"></div><div class="skeleton-text small"></div></div>
+                <div class="skeleton-card"><div class="skeleton-icon"></div><div class="skeleton-text"></div><div class="skeleton-text small"></div></div>
+                <div class="skeleton-card"><div class="skeleton-icon"></div><div class="skeleton-text"></div><div class="skeleton-text small"></div></div>
+                <div class="skeleton-card"><div class="skeleton-icon"></div><div class="skeleton-text"></div><div class="skeleton-text small"></div></div>
+                <div class="skeleton-card"><div class="skeleton-icon"></div><div class="skeleton-text"></div><div class="skeleton-text small"></div></div>
+                <div class="skeleton-card"><div class="skeleton-icon"></div><div class="skeleton-text"></div><div class="skeleton-text small"></div></div>
+            </div>
+
+            <div id="itemsContainer" class="grid"></div>
+
+            <div id="emptyState" class="empty" style="display: none;">
+                <div class="empty-icon">📦</div>
+                <div class="empty-title">All Clean</div>
+                <div class="empty-text">No items found</div>
+            </div>
+
+            <div id="browsersView" style="display: none;"></div>
+        </div>
+    </main>
+</div>
+
+<div id="contextMenu" class="context-menu" style="display: none;">
+    <div class="context-menu-item" onclick="copyPath()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>
+        Copy Path
+    </div>
+    <div class="context-menu-item" onclick="revealInFinder()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+        Open File Location
+    </div>
+    <div class="context-menu-item" onclick="getInfo()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/></svg>
+        Get Info
+    </div>
+    <div class="context-menu-item" id="contextRestore" onclick="restoreFromTrash()" style="display: none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M13 3c-4.97 0-9 4.03-9 9H1l3.89 3.89.07.14L9 12H6c0-3.87 3.13-7 7-7s7 3.13 7 7-3.13 7-7 7c-1.93 0-3.68-.79-4.94-2.06l-1.42 1.42C8.27 19.99 10.51 21 13 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm-1 5v5l4.28 2.54.72-1.21-3.5-2.08V8H12z"/></svg>
+        Restore
+    </div>
+    <div class="context-menu-item" onclick="deleteFromContext()">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+        Delete
+    </div>
+    <div class="context-menu-item" id="contextShowAssociated" onclick="showAssociatedFiles()" style="display: none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M4 6h16v2H4zm0 5h16v2H4zm0 5h16v2H4z"/></svg>
+        Show Associated Files
+    </div>
+    <div class="context-menu-item" id="contextShowFolder" onclick="showFolderContents()" style="display: none;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M10 4H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+        Open Folder
+    </div>
+</div>
+
+<div id="associatedModal" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-header">
+            <div class="modal-title" id="associatedModalTitle">Associated Files</div>
+            <button class="modal-close" onclick="closeAssociatedModal()">×</button>
+        </div>
+        <div class="modal-body" id="associatedModalBody"></div>
+    </div>
+</div>
+
+<div id="confirmDialog" class="confirm-dialog">
+    <div class="confirm-title" id="confirmTitle">Confirm Action</div>
+    <div class="confirm-message" id="confirmMessage"></div>
+    <div class="confirm-actions">
+        <button class="btn" onclick="closeConfirm()">Cancel</button>
+        <button class="btn btn-danger" id="confirmBtn" onclick="confirmAction()">Proceed</button>
+    </div>
+</div>
+
+<div id="alertOverlay" class="alert-overlay">
+    <div class="alert-dialog">
+        <div class="alert-icon" id="alertIcon"></div>
+        <div class="alert-title" id="alertTitle">Alert</div>
+        <div class="alert-message" id="alertMessage"></div>
+        <div class="alert-actions" id="alertActions">
+            <button class="alert-btn alert-btn-primary" onclick="closeAlert()">OK</button>
+        </div>
+    </div>
+</div>
+
+<div id="permissionNoticeTemplate" style="display: none;">
+    <div class="permission-notice">
+        <div class="permission-icon"></div>
+        <div class="permission-content">
+            <div class="permission-title">Full Disk Access Required</div>
+            <div class="permission-message">
+                To view Trash and Safari data, please grant Full Disk Access permission.
+            </div>
+            <ol class="permission-steps">
+                <li>Open System Settings</li>
+                <li>Go to Privacy & Security → Full Disk Access</li>
+                <li>Click the lock icon and authenticate</li>
+                <li>Add this application and enable it</li>
+                <li>Restart the application</li>
+            </ol>
+            <button class="btn btn-primary btn-hover" onclick="openSystemSettings()">Open System Settings</button>
+        </div>
+    </div>
+</div>
+<script>
+    // j
+</script>
+</body>
+</html>
