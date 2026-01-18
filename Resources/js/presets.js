@@ -112,8 +112,11 @@ async function addCustomFolder(event) {
             <span onclick="navigateToCustomFolder('${folderPath}', event); event.stopPropagation();" style="flex: 1;">
                 ${folderName}
             </span>
+            <span class="nav-count" id="count-${folderId}">...</span>
             <span class="nav-remove" onclick="removeCustomFolder('${folderId}'); event.stopPropagation();" title="Remove folder">×</span>
         `;
+
+        updateCustomFolderCount(folderId, folderPath);
 
         container.appendChild(customItem);
 
@@ -206,6 +209,22 @@ function removeCustomFolder(folderId) {
     if (curTab === folderId) {
         const allItem = document.querySelector('.nav-item[onclick*="all"]');
         switchPreset('all', { currentTarget: allItem });
+    }
+}
+
+async function updateCustomFolderCount(folderId, folderPath) {
+    try {
+        const contents = await pywebview.api.get_directory_contents(folderPath);
+        const count = Array.isArray(contents) ? contents.length : 0;
+        const countEl = document.getElementById(`count-${folderId}`);
+        if (countEl) {
+            countEl.textContent = count;
+        }
+    } catch (e) {
+        const countEl = document.getElementById(`count-${folderId}`);
+        if (countEl) {
+            countEl.textContent = '?';
+        }
     }
 }
 
