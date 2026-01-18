@@ -6,6 +6,14 @@ class FocusableWebView: WKWebView {
     override var acceptsFirstResponder: Bool { true }
     override var canBecomeKeyView: Bool { true }
 
+    override func willOpenMenu(_ menu: NSMenu, with event: NSEvent) {
+        menu.items.removeAll { item in
+            let title = item.title.lowercased()
+            return title.contains("reload") || title.contains("back") || title.contains("forward")
+        }
+        super.willOpenMenu(menu, with: event)
+    }
+
     override func becomeFirstResponder() -> Bool {
         let result = super.becomeFirstResponder()
         DispatchQueue.main.async {
@@ -65,7 +73,14 @@ class FocusableWebView: WKWebView {
                         if (input && (input.tagName === 'INPUT' || input.tagName === 'TEXTAREA')) {
                             input.select();
                         } else {
-                            document.execCommand('selectAll');
+
+                            if (typeof selectAll === 'function' && typeof allSelected !== 'undefined') {
+                                if (allSelected) {
+                                    deselectAll();
+                                } else {
+                                    selectAll();
+                                }
+                            }
                         }
                     })();
                 """, completionHandler: nil)
@@ -89,7 +104,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKNavigationDe
         NSApp.activate(ignoringOtherApps: true)
 
         window = NSWindow(
-            contentRect: NSRect(x: 0, y: 0, width: 1500, height: 950),
+            contentRect: NSRect(x: 0, y: 0, width: 1500, height: 1000),
             styleMask: [.titled, .closable, .miniaturizable, .resizable],
             backing: .buffered,
             defer: false
@@ -102,7 +117,9 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKNavigationDe
 
         let config = WKWebViewConfiguration()
 
+        #if DEBUG
         config.preferences.setValue(true, forKey: "developerExtrasEnabled")
+        #endif
 
         config.preferences.setValue(true, forKey: "javaScriptCanOpenWindowsAutomatically")
         if #available(macOS 13.3, *) {
@@ -159,19 +176,19 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKNavigationDe
                 (function() {
                     const input = document.getElementById('searchInput');
                     if (input) {
-                        // Remove any interfering attributes
+
                         input.removeAttribute('readonly');
                         input.removeAttribute('disabled');
 
-                        // Blur any current focus
+
                         if (document.activeElement) {
                             document.activeElement.blur();
                         }
 
-                        // Multiple focus attempts for WKWebView quirks
+
                         input.focus();
 
-                        // Simulate a click to trigger native focus
+
                         const clickEvent = new MouseEvent('click', {
                             view: window,
                             bubbles: true,
@@ -179,7 +196,7 @@ class AppDelegate: NSObject, NSApplicationDelegate, WKUIDelegate, WKNavigationDe
                         });
                         input.dispatchEvent(clickEvent);
 
-                        // Set selection range to show caret
+
                         setTimeout(() => {
                             input.focus();
                             input.setSelectionRange(0, 0);
@@ -357,9 +374,85 @@ extension AppDelegate: WKScriptMessageHandler {
         case "delete_selected_items":
             let includeAssociated = params.first as? Bool ?? true
             return AppController.shared.deleteSelected(includeAssociated: includeAssociated)
+        case "save_cache":
+            guard let cacheData = params.first as? String else {
+                return "{\"success\": false, \"error\": \"No data provided\"}"
+            }
+            return saveCache(cacheData)
+        case "load_cache":
+            return loadCache()
+        case "save_icon_cache":
+            guard let iconData = params.first as? String else {
+                return "{\"success\": false, \"error\": \"No data provided\"}"
+            }
+            return saveIconCache(iconData)
+        case "load_icon_cache":
+            return loadIconCache()
+        case "save_size_cache":
+            guard let sizeData = params.first as? String else {
+                return "{\"success\": false, \"error\": \"No data provided\"}"
+            }
+            return saveSizeCache(sizeData)
+        case "load_size_cache":
+            return loadSizeCache()
+        case "get_item_size":
+            guard let path = params.first as? String else {
+                return "{\"size\": 0, \"size_str\": \"0 B\"}"
+            }
+            return Scanner.shared.getItemSize(path: path)
+        case "download_and_install_update":
+            guard let downloadUrl = params.first as? String else {
+                return "{\"success\": false, \"error\": \"No download URL provided\"}"
+            }
+            return downloadUpdate(url: downloadUrl)
+        case "get_app_version":
+            let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
+            return "{\"version\": \"\(version)\"}"
         default:
             return "null"
         }
+    }
+
+    func downloadUpdate(url: String) -> String {
+        guard let downloadUrl = URL(string: url) else {
+            return "{\"success\": false, \"error\": \"Invalid URL\"}"
+        }
+
+        let downloadsPath = FileManager.default.urls(for: .downloadsDirectory, in: .userDomainMask).first!
+        let destinationPath = downloadsPath.appendingPathComponent("MacExplore-update.dmg")
+
+
+        try? FileManager.default.removeItem(at: destinationPath)
+
+
+        let semaphore = DispatchSemaphore(value: 0)
+        var resultString = "{\"success\": false, \"error\": \"Download failed\"}"
+
+        let task = URLSession.shared.downloadTask(with: downloadUrl) { tempUrl, response, error in
+            defer { semaphore.signal() }
+
+            if let error = error {
+                resultString = "{\"success\": false, \"error\": \"\(error.localizedDescription.replacingOccurrences(of: "\"", with: "\\\""))\"}"
+                return
+            }
+
+            guard let tempUrl = tempUrl else {
+                resultString = "{\"success\": false, \"error\": \"No file downloaded\"}"
+                return
+            }
+
+            do {
+                try FileManager.default.moveItem(at: tempUrl, to: destinationPath)
+                resultString = "{\"success\": true, \"dmg_path\": \"\(destinationPath.path)\"}"
+            } catch {
+                resultString = "{\"success\": false, \"error\": \"\(error.localizedDescription.replacingOccurrences(of: "\"", with: "\\\""))\"}"
+            }
+        }
+
+        task.resume()
+        _ = semaphore.wait(timeout: .now() + 120)
+
+        return resultString
     }
 
     func restartBrowser(_ browserName: String) -> String {
@@ -459,6 +552,87 @@ extension AppDelegate: WKScriptMessageHandler {
         } catch {
             print("[appendToLog] Error: \(error)")
             return "false"
+        }
+    }
+
+    func saveCache(_ cacheData: String) -> String {
+        let cachePath = NSHomeDirectory() + "/Library/Caches/com.osift.macexplore"
+        let cacheFile = cachePath + "/scan_cache.json"
+        do {
+            try FileManager.default.createDirectory(atPath: cachePath, withIntermediateDirectories: true)
+            try cacheData.write(toFile: cacheFile, atomically: true, encoding: .utf8)
+            return "{\"success\": true}"
+        } catch {
+            let escapedError = error.localizedDescription.replacingOccurrences(of: "\"", with: "\\\"")
+            return "{\"success\": false, \"error\": \"\(escapedError)\"}"
+        }
+    }
+
+    func loadCache() -> String {
+        let cacheFile = NSHomeDirectory() + "/Library/Caches/com.osift.macexplore/scan_cache.json"
+        guard FileManager.default.fileExists(atPath: cacheFile) else {
+            return "{\"found\": false}"
+        }
+        do {
+            let cacheData = try String(contentsOfFile: cacheFile, encoding: .utf8)
+            return "{\"found\": true, \"data\": \(cacheData)}"
+        } catch {
+            let escapedError = error.localizedDescription.replacingOccurrences(of: "\"", with: "\\\"")
+            return "{\"found\": false, \"error\": \"\(escapedError)\"}"
+        }
+    }
+
+    func saveIconCache(_ iconData: String) -> String {
+        let cachePath = NSHomeDirectory() + "/Library/Caches/com.osift.macexplore"
+        let cacheFile = cachePath + "/icon_cache.json"
+        do {
+            try FileManager.default.createDirectory(atPath: cachePath, withIntermediateDirectories: true)
+            try iconData.write(toFile: cacheFile, atomically: true, encoding: .utf8)
+            return "{\"success\": true}"
+        } catch {
+            let escapedError = error.localizedDescription.replacingOccurrences(of: "\"", with: "\\\"")
+            return "{\"success\": false, \"error\": \"\(escapedError)\"}"
+        }
+    }
+
+    func loadIconCache() -> String {
+        let cacheFile = NSHomeDirectory() + "/Library/Caches/com.osift.macexplore/icon_cache.json"
+        guard FileManager.default.fileExists(atPath: cacheFile) else {
+            return "{\"found\": false}"
+        }
+        do {
+            let iconData = try String(contentsOfFile: cacheFile, encoding: .utf8)
+            return "{\"found\": true, \"data\": \(iconData)}"
+        } catch {
+            let escapedError = error.localizedDescription.replacingOccurrences(of: "\"", with: "\\\"")
+            return "{\"found\": false, \"error\": \"\(escapedError)\"}"
+        }
+    }
+
+    func saveSizeCache(_ sizeData: String) -> String {
+        let cachePath = NSHomeDirectory() + "/Library/Caches/com.osift.macexplore"
+        let cacheFile = cachePath + "/size_cache.json"
+        do {
+            try FileManager.default.createDirectory(atPath: cachePath, withIntermediateDirectories: true)
+            try sizeData.write(toFile: cacheFile, atomically: true, encoding: .utf8)
+            return "{\"success\": true}"
+        } catch {
+            let escapedError = error.localizedDescription.replacingOccurrences(of: "\"", with: "\\\"")
+            return "{\"success\": false, \"error\": \"\(escapedError)\"}"
+        }
+    }
+
+    func loadSizeCache() -> String {
+        let cacheFile = NSHomeDirectory() + "/Library/Caches/com.osift.macexplore/size_cache.json"
+        guard FileManager.default.fileExists(atPath: cacheFile) else {
+            return "{\"found\": false}"
+        }
+        do {
+            let sizeData = try String(contentsOfFile: cacheFile, encoding: .utf8)
+            return "{\"found\": true, \"data\": \(sizeData)}"
+        } catch {
+            let escapedError = error.localizedDescription.replacingOccurrences(of: "\"", with: "\\\"")
+            return "{\"found\": false, \"error\": \"\(escapedError)\"}"
         }
     }
 }
