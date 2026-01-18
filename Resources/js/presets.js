@@ -6,8 +6,6 @@ function switchPreset(preset, event) {
     allSelected = false;
     lastIdx = -1;
 
-    items.length = 0;
-    allItems.length = 0;
 
     navHistory = [];
     curPath = null;
@@ -119,6 +117,8 @@ async function addCustomFolder(event) {
         updateCustomFolderCount(folderId, folderPath);
 
         container.appendChild(customItem);
+
+        addCustomFolderMonitoring(folderPath);
 
         document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
         customItem.classList.add('active');
