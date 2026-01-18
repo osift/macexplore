@@ -83,6 +83,9 @@ document.addEventListener('keydown', (e) => {
     }
 
     if ((e.metaKey || e.ctrlKey) && e.key === 'a') {
+        if (curTab === 'help') {
+            return;
+        }
         e.preventDefault();
         if (allSelected) {
             deselectAll();
@@ -138,13 +141,30 @@ function hideLoader() {
     }
 }
 
+async function initializeCaches() {
+    try {
+
+        await Promise.all([
+            loadSizeCache(),
+            loadIconCacheFromDisk(),
+            loadScanCacheFromDisk()
+        ]);
+        console.log('[Init] All caches loaded');
+    } catch (e) {
+        console.warn('[Init] Error loading caches:', e);
+    }
+}
+
 function waitForAPI() {
     if (typeof pywebview !== 'undefined' && pywebview.api) {
-        updateCounts();
-        scanSystem().then(() => {
-            hideLoader();
+
+        initializeCaches().then(() => {
+            updateCounts();
+            scanSystem().then(() => {
+                hideLoader();
+            });
+            updateToolbarForPreset();
         });
-        updateToolbarForPreset();
     } else {
         setTimeout(waitForAPI, 100);
     }
