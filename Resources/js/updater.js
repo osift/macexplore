@@ -103,8 +103,7 @@ async function performUpdate() {
         closeProgressAlert();
 
         if (result.success) {
-            showAlert('Update Complete', 'The update has been downloaded. Please restart the application to apply changes.', 'success', () => {
-
+            showAlert('Update Downloaded', 'Open the DMG and drag MacExplore to Applications to replace the current version.', 'success', () => {
                 if (result.dmg_path) {
                     pywebview.api.reveal_in_finder(result.dmg_path);
                 }
