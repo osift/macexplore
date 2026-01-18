@@ -1,7 +1,9 @@
-async function navigateToFolder(folderPath) {
+async function navigateToFolder(folderPath, isCustomRoot = false) {
     try {
 
-        navHistory.push({ items: [...items], path: curPath });
+        if (!isCustomRoot) {
+            navHistory.push({ items: [...items], path: curPath });
+        }
 
         const myContextId = resetState('folder');
         curPath = folderPath;
@@ -38,7 +40,11 @@ async function navigateToFolder(folderPath) {
         renderItems();
         updateStats();
 
-        showBackButton();
+        if (navHistory.length > 0) {
+            showBackButton();
+        } else {
+            hideBackButton();
+        }
 
         loadFolderSizes(items, runningId, myContextId);
 
