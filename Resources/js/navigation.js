@@ -40,6 +40,8 @@ async function navigateToFolder(folderPath) {
 
         showBackButton();
 
+        loadFolderSizes(items, runningId, myContextId);
+
     } catch (error) {
         hideLoadingState();
         showAlert('Error', 'Error opening folder: ' + error.message, 'error');
