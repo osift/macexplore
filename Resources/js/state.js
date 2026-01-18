@@ -6,8 +6,8 @@ let scanId = 0;
 let runningId = null;
 let isScanning = false;
 
-let currentContextType = null; 
-let activeContextId = 0; 
+let currentContextType = null;
+let activeContextId = 0;
 
 let menuTarget = null;
 let menuIsFolder = false;
@@ -27,6 +27,74 @@ let monitoredPaths = [];
 
 let scanCache = {};
 let dirtyCache = new Set();
+
+
+let sizeCache = {};
+let iconCacheData = {};
+
+async function loadSizeCache() {
+    try {
+        const result = await pywebview.api.load_size_cache();
+        if (result.found && result.data) {
+            sizeCache = result.data;
+            console.log('[SizeCache] Loaded', Object.keys(sizeCache).length, 'cached sizes');
+        }
+    } catch (e) {
+        console.warn('[SizeCache] Failed to load:', e);
+    }
+}
+
+async function saveSizeCache() {
+    try {
+        await pywebview.api.save_size_cache(JSON.stringify(sizeCache));
+    } catch (e) {
+        console.warn('[SizeCache] Failed to save:', e);
+    }
+}
+
+function getCachedSize(path) {
+    return sizeCache[path] || null;
+}
+
+async function loadIconCacheFromDisk() {
+    try {
+        const result = await pywebview.api.load_icon_cache();
+        if (result.found && result.data) {
+            iconCacheData = result.data;
+            console.log('[IconCache] Loaded', Object.keys(iconCacheData).length, 'cached icons');
+        }
+    } catch (e) {
+        console.warn('[IconCache] Failed to load:', e);
+    }
+}
+
+async function saveIconCacheToDisk() {
+    try {
+        await pywebview.api.save_icon_cache(JSON.stringify(iconCacheData));
+    } catch (e) {
+        console.warn('[IconCache] Failed to save:', e);
+    }
+}
+
+async function loadScanCacheFromDisk() {
+    try {
+        const result = await pywebview.api.load_cache();
+        if (result.found && result.data) {
+            scanCache = result.data;
+            console.log('[ScanCache] Loaded', Object.keys(scanCache).length, 'cached tabs');
+        }
+    } catch (e) {
+        console.warn('[ScanCache] Failed to load:', e);
+    }
+}
+
+async function saveScanCacheToDisk() {
+    try {
+        await pywebview.api.save_cache(JSON.stringify(scanCache));
+    } catch (e) {
+        console.warn('[ScanCache] Failed to save:', e);
+    }
+}
 
 async function checkDeleteResult(results, isTrashOperation) {
 
@@ -54,6 +122,18 @@ async function checkDeleteResult(results, isTrashOperation) {
 
             const successPaths = new Set(allSuccessful);
             const successBasenames = new Set(allSuccessful.map(p => p.split('/').pop()));
+
+
+            const cardsToRemove = allSuccessful.map(path =>
+                document.querySelector(`[data-path="${CSS.escape(path)}"]`)
+            ).filter(Boolean);
+
+            cardsToRemove.forEach(card => card.classList.add('removing'));
+
+
+            if (cardsToRemove.length > 0) {
+                await new Promise(resolve => setTimeout(resolve, 300));
+            }
 
             items = items.filter(item => {
                 const basename = item.path.split('/').pop();
@@ -88,7 +168,7 @@ async function checkDeleteResult(results, isTrashOperation) {
         }
     }
 
-    return null; 
+    return null;
 }
 
 async function checkRestoreResult(restoredPaths, results) {
