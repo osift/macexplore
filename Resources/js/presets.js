@@ -124,7 +124,7 @@ async function addCustomFolder(event) {
         customItem.classList.add('active');
         curTab = folderId;
         document.getElementById('toolbarTitle').textContent = folderName;
-        await navigateToFolder(folderPath);
+        await navigateToFolder(folderPath, true);
 
     } catch (error) {
         console.error('addCustomFolder error:', error);
@@ -179,7 +179,8 @@ async function navigateToCustomFolder(folderPath, event) {
     if (folder) {
         document.getElementById('toolbarTitle').textContent = folder.name;
     }
-    await navigateToFolder(folderPath);
+    navHistory = [];
+    await navigateToFolder(folderPath, true);
 }
 
 async function validateCustomFolders() {
