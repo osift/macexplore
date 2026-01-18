@@ -56,6 +56,33 @@ function getCachedSize(path) {
     return sizeCache[path] || null;
 }
 
+function invalidateSizeCacheForPath(changedPath) {
+    let invalidated = false;
+
+    for (const cachedPath of Object.keys(sizeCache)) {
+        if (changedPath.startsWith(cachedPath + '/') || changedPath === cachedPath) {
+            delete sizeCache[cachedPath];
+            invalidated = true;
+        }
+    }
+
+    let parentPath = changedPath;
+    while (parentPath.includes('/')) {
+        parentPath = parentPath.substring(0, parentPath.lastIndexOf('/'));
+        if (parentPath && sizeCache[parentPath]) {
+            delete sizeCache[parentPath];
+            invalidated = true;
+        }
+    }
+
+    if (invalidated) {
+        console.log('[SizeCache] Invalidated cache for:', changedPath);
+        saveSizeCache();
+    }
+
+    return invalidated;
+}
+
 async function loadIconCacheFromDisk() {
     try {
         const result = await pywebview.api.load_icon_cache();
@@ -80,6 +107,12 @@ async function loadScanCacheFromDisk() {
     try {
         const result = await pywebview.api.load_cache();
         if (result.found && result.data) {
+            for (const key of Object.keys(result.data)) {
+                result.data[key] = result.data[key].map(item => ({
+                    ...item,
+                    icon: iconCacheData[item.path] || getDefaultIcon(item.type)
+                }));
+            }
             scanCache = result.data;
             console.log('[ScanCache] Loaded', Object.keys(scanCache).length, 'cached tabs');
         }
@@ -90,7 +123,11 @@ async function loadScanCacheFromDisk() {
 
 async function saveScanCacheToDisk() {
     try {
-        await pywebview.api.save_cache(JSON.stringify(scanCache));
+        const cacheToSave = {};
+        for (const key of Object.keys(scanCache)) {
+            cacheToSave[key] = scanCache[key].map(({ icon, ...rest }) => rest);
+        }
+        await pywebview.api.save_cache(JSON.stringify(cacheToSave));
     } catch (e) {
         console.warn('[ScanCache] Failed to save:', e);
     }
