@@ -19,7 +19,7 @@ function showAlert(title, message, type = 'info', callback = null, browserIcon =
     }
 
     titleEl.textContent = title;
-    messageEl.innerHTML = message; 
+    messageEl.innerHTML = message;
     alertCallback = callback;
 
     if (customActions) {
