@@ -408,6 +408,8 @@ extension AppDelegate: WKScriptMessageHandler {
         case "get_app_version":
             let version = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0.0"
             return "{\"version\": \"\(version)\"}"
+        case "get_home_directory":
+            return "\"\(NSHomeDirectory())\""
         default:
             return "null"
         }
