@@ -8,7 +8,7 @@ class Cleaner {
 
     func deepClean(paths: [String], includeAssociated: Bool) -> String {
         var success: [String] = []
-        var permanentlyDeleted: [String] = []  
+        var permanentlyDeleted: [String] = []
         var failed: [[String: String]] = []
         var associatedRemoved: [String] = []
         var forceQuit: [String] = []
@@ -331,7 +331,7 @@ class Cleaner {
               let ownerID = attrs[.ownerAccountID] as? UInt else {
             return false
         }
-        return ownerID == 0 
+        return ownerID == 0
     }
 
     private func deleteWithPrivileges(path: String) -> (success: Bool, error: String) {
@@ -373,3 +373,4 @@ class Cleaner {
     }
 
 }
+
