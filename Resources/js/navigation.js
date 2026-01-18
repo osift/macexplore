@@ -1,15 +1,41 @@
 async function navigateToFolder(folderPath, isCustomRoot = false) {
     try {
+        const cacheKey = 'folder_' + folderPath;
+        const isSameFolder = curPath === folderPath;
 
-        if (!isCustomRoot) {
+        if (!isCustomRoot && !isSameFolder) {
             navHistory.push({ items: [...items], path: curPath });
         }
 
-        const myContextId = resetState('folder');
+        let myContextId;
+        if (!isSameFolder) {
+            myContextId = resetState('folder');
+        } else {
+            myContextId = activeContextId;
+        }
         curPath = folderPath;
 
-        showLoadingState();
-        document.getElementById('itemsContainer').style.display = 'none';
+        const cachedItems = scanCache[cacheKey];
+        let showedCache = false;
+
+        const container = document.getElementById('itemsContainer');
+
+        if (cachedItems && cachedItems.length > 0 && !isSameFolder) {
+            items = [...cachedItems];
+            allItems = [...items];
+
+            hideLoadingState();
+            resetEmptyState();
+            container.style.display = 'grid';
+            renderItems(true);  // No animation for cached display
+            updateStats();
+            showedCache = true;
+        } else if (isSameFolder && items.length > 0) {
+            showedCache = true;
+        } else if (!isSameFolder) {
+            showLoadingState();
+            container.style.display = 'none';
+        }
 
         const contents = await pywebview.api.get_directory_contents(folderPath);
 
@@ -17,7 +43,7 @@ async function navigateToFolder(folderPath, isCustomRoot = false) {
             return;
         }
 
-        items = contents.map(item => ({
+        const newItems = contents.map(item => ({
             ...item,
             icon: getDefaultIcon(item.type),
             category: 'Folder View',
@@ -25,20 +51,63 @@ async function navigateToFolder(folderPath, isCustomRoot = false) {
             protected: isSysPath(item.path)
         }));
 
-        allItems = [...items];
+        const currentPaths = new Set(items.map(i => i.path));
+        const newPaths = new Set(newItems.map(i => i.path));
 
-        hideLoadingState();
+        const pathsToRemove = [...currentPaths].filter(p => !newPaths.has(p));
+        const itemsToAdd = newItems.filter(item => !currentPaths.has(item.path));
+        const isSameData = pathsToRemove.length === 0 && itemsToAdd.length === 0;
 
-        if (items.length === 0) {
-            showEmptyState();
-            document.getElementById('itemsContainer').style.display = 'none';
+        if (showedCache && isSameData) {
+        } else if (showedCache && (pathsToRemove.length > 0 || itemsToAdd.length > 0)) {
+
+            if (pathsToRemove.length > 0) {
+                const cardsToRemove = pathsToRemove.map(path =>
+                    document.querySelector(`[data-path="${CSS.escape(path)}"]`)
+                ).filter(Boolean);
+
+                cardsToRemove.forEach(card => card.classList.add('removing'));
+                if (cardsToRemove.length > 0) {
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    cardsToRemove.forEach(card => card.remove());
+                }
+
+                items = items.filter(item => !pathsToRemove.includes(item.path));
+                allItems = allItems.filter(item => !pathsToRemove.includes(item.path));
+            }
+
+            if (itemsToAdd.length > 0) {
+                items.push(...itemsToAdd);
+                allItems.push(...itemsToAdd);
+                appendNewItems(itemsToAdd);
+                loadFolderSizes(itemsToAdd, runningId, myContextId);
+            }
+
+            updateStats();
         } else {
-            resetEmptyState();
-            document.getElementById('itemsContainer').style.display = 'grid';
+            items = newItems;
+            allItems = [...items];
+
+            hideLoadingState();
+
+            if (items.length === 0) {
+                showEmptyState();
+                container.style.display = 'none';
+            } else {
+                resetEmptyState();
+                container.style.display = 'grid';
+            }
+
+            renderItems(true);  // Skip animation for initial load
+            updateStats();
         }
 
-        renderItems();
-        updateStats();
+        if (items.length > 0) {
+            scanCache[cacheKey] = [...items];
+            saveScanCacheToDisk();
+        } else {
+            delete scanCache[cacheKey];
+        }
 
         if (navHistory.length > 0) {
             showBackButton();
@@ -89,7 +158,7 @@ function navigateBack() {
         resetEmptyState();
         document.getElementById('itemsContainer').style.display = 'grid';
 
-        renderItems();
+        renderItems(true);  // Skip animation for back navigation
         updateStats();
 
         if (navHistory.length === 0) {
