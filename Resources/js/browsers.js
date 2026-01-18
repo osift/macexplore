@@ -6,6 +6,7 @@ async function recheckBrowserPermissions() {
         if (result.has_access) {
             await loadBrowsers();
         } else {
+            //oup false
             showAlert('Permission Denied', 'Full Disk Access is still not granted. Please enable it in System Settings and try again.', 'warning');
         }
     } catch (error) {
@@ -280,7 +281,7 @@ async function viewExtensions(browser) {
 }
 
 async function removeExtension(browser, extId, extPath, extName) {
-    // Check if browser is running
+
     const isRunning = await pywebview.api.is_app_running(browser) === 'true';
 
     let confirmMsg = `Remove ${extName}?`;
@@ -309,4 +310,3 @@ async function removeExtension(browser, extId, extPath, extName) {
         showAlert('Error', error.message, 'error');
     }
 }
-
