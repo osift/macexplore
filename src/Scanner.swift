@@ -187,7 +187,7 @@ class Scanner {
     private func scanTrashInternal() -> [[String: Any]] {
         let trashPath = NSHomeDirectory() + "/.Trash"
         var items: [[String: Any]] = []
-        var seenPaths = Set<String>()  
+        var seenPaths = Set<String>()
 
         guard let contents = try? fileManager.contentsOfDirectory(atPath: trashPath) else {
             return items
@@ -226,10 +226,12 @@ class Scanner {
         let name = (path as NSString).lastPathComponent
         var size: Int64 = 0
         var isDirectory: ObjCBool = false
+        var needsSizeCalculation = false
 
         if fileManager.fileExists(atPath: path, isDirectory: &isDirectory) {
             if isDirectory.boolValue {
-                size = getDirectorySize(path: path)
+
+                needsSizeCalculation = true
             } else {
                 size = attrs[.size] as? Int64 ?? 0
             }
@@ -250,10 +252,11 @@ class Scanner {
             "name": name,
             "path": path,
             "size": size,
-            "size_str": formatSize(size),
+            "size_str": needsSizeCalculation ? "Loading..." : formatSize(size),
             "type": type,
             "is_app": isApp,
-            "modified": modified
+            "modified": modified,
+            "needs_size": needsSizeCalculation
         ]
     }
 
@@ -285,6 +288,29 @@ class Scanner {
         }
 
         return String(format: "%.1f %@", size, units[unitIndex])
+    }
+
+    func getItemSize(path: String) -> String {
+        var size: Int64 = 0
+        var isDirectory: ObjCBool = false
+
+        if fileManager.fileExists(atPath: path, isDirectory: &isDirectory) {
+            if isDirectory.boolValue {
+                size = getDirectorySize(path: path)
+            } else {
+                if let attrs = try? fileManager.attributesOfItem(atPath: path) {
+                    size = attrs[.size] as? Int64 ?? 0
+                }
+            }
+        }
+
+        let result: [String: Any] = [
+            "size": size,
+            "size_str": formatSize(size)
+        ]
+
+        let jsonData = try! JSONSerialization.data(withJSONObject: result)
+        return String(data: jsonData, encoding: .utf8)!
     }
 
     func getDiskSpace() -> String {
@@ -594,7 +620,7 @@ class Scanner {
               let ownerID = attrs[.ownerAccountID] as? UInt else {
             return false
         }
-        return ownerID == 0 
+        return ownerID == 0
     }
 
     private func moveWithPrivileges(from sourcePath: String, to destPath: String) -> (success: Bool, error: String) {
