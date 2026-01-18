@@ -284,3 +284,4 @@ class AppState: ObservableObject {
         diskSpace = DiskSpaceInfo(free: free, used: used, total: total, percentUsed: percent)
     }
 }
+
