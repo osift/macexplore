@@ -36,6 +36,7 @@ struct HTMLContent {
             "Resources/js/itemManager.js",
             "Resources/js/contextMenu.js",
             "Resources/js/trash.js",
+            "Resources/js/updater.js",
             "Resources/js/init.js",
             "Resources/js/logger.js"
         ]
@@ -98,3 +99,4 @@ struct HTMLContent {
         return nil
     }
 }
+
