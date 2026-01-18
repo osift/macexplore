@@ -1,7 +1,7 @@
 .toast {
   position: fixed;
   bottom: 24px;
-  left: 50%;
+  left: calc(260px + (100% - 260px) / 2);
   transform: translateX(-50%);
   background: var(--bg-card);
   border: 1px solid var(--border);
