@@ -158,12 +158,14 @@ async function initializeCaches() {
 function waitForAPI() {
     if (typeof pywebview !== 'undefined' && pywebview.api) {
 
-        initializeCaches().then(() => {
-            updateCounts();
-            scanSystem().then(() => {
-                hideLoader();
+        initHomeDirectory().then(() => {
+            initializeCaches().then(() => {
+                updateCounts();
+                scanSystem().then(() => {
+                    hideLoader();
+                });
+                updateToolbarForPreset();
             });
-            updateToolbarForPreset();
         });
     } else {
         setTimeout(waitForAPI, 100);
