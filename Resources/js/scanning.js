@@ -45,7 +45,16 @@ async function scanSystem() {
         return;
     }
 
+    if (curTab && curTab.startsWith('custom_')) {
+        const folder = userFolders.find(f => f.id === curTab);
+        if (folder) {
+            await navigateToFolder(folder.path, true);
+        }
+        return;
+    }
+
     const cacheKey = curTab + (curPath || '');
+    const shouldCache = curTab !== 'trash'; // Don't cache trash - it changes too frequently
 
     const searchInput = document.getElementById('searchInput');
     const currentSearchQuery = searchInput ? searchInput.value : '';
@@ -59,9 +68,12 @@ async function scanSystem() {
 
     updateStats();
 
+    const hasCachedItems = shouldCache && scanCache[cacheKey] && scanCache[cacheKey].length > 0;
 
-    showLoadingState(8);
-    document.getElementById('itemsContainer').style.display = 'none';
+    if (!hasCachedItems) {
+        showLoadingState(8);
+        document.getElementById('itemsContainer').style.display = 'none';
+    }
     const browsersView = document.getElementById('browsersView');
     if (browsersView) browsersView.style.display = 'none';
 
@@ -79,6 +91,12 @@ async function scanSystem() {
             hideLoadingState();
             delete scanCache[cacheKey];
 
+            const container = document.getElementById('itemsContainer');
+            container.style.display = 'none';
+            container.innerHTML = '';
+            items.length = 0;
+            allItems.length = 0;
+
             if (curTab === 'trash') {
                 showPermissionNotice();
             } else {
@@ -94,22 +112,37 @@ async function scanSystem() {
         let showedCache = false;
 
         if (cachedItems && cachedItems.length > 0) {
+            const container = document.getElementById('itemsContainer');
+
+            const existingPaths = new Set(items.map(i => i.path));
+            const cachedPaths = new Set(cachedItems.map(i => i.path));
+            const isSameData = existingPaths.size === cachedPaths.size &&
+                [...existingPaths].every(p => cachedPaths.has(p));
+
             items = [...cachedItems];
             allItems = [...cachedItems];
 
             hideLoadingState();
             resetEmptyState();
-            const container = document.getElementById('itemsContainer');
             container.style.display = 'grid';
-            renderItems();
+
+            const existingCards = container.querySelectorAll('.card').length;
+            if (existingCards === 0 || !isSameData) {
+                renderItems(isSameData);
+                console.log(`[Cache] Showing ${cachedItems.length} cached items for ${cacheKey}`);
+            } else {
+                console.log(`[Cache] Using ${cachedItems.length} cached items for ${cacheKey} (already displayed)`);
+            }
             updateStats();
             showedCache = true;
-            console.log(`[Cache] Showing ${cachedItems.length} cached items for ${cacheKey}`);
-
 
             await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
-        } else if (startData.total !== undefined) {
-            showLoadingState(startData.total);
+        } else {
+            items.length = 0;
+            allItems.length = 0;
+            if (startData.total !== undefined) {
+                showLoadingState(startData.total);
+            }
         }
 
         let scannedItems = [];
@@ -130,22 +163,21 @@ async function scanSystem() {
             let needsUpdate = false;
 
             if (pathsToRemove.length > 0) {
-
                 const cardsToRemove = pathsToRemove.map(path =>
                     document.querySelector(`[data-path="${CSS.escape(path)}"]`)
                 ).filter(Boolean);
 
                 cardsToRemove.forEach(card => card.classList.add('removing'));
 
-
                 if (cardsToRemove.length > 0) {
                     await new Promise(resolve => setTimeout(resolve, 300));
+                    cardsToRemove.forEach(card => card.remove());
                 }
 
                 items = items.filter(item => !pathsToRemove.includes(item.path));
                 allItems = allItems.filter(item => !pathsToRemove.includes(item.path));
                 console.log(`[Sync] Removed ${pathsToRemove.length} deleted items`);
-                needsUpdate = true;
+                if (!showedCache) needsUpdate = true;
             }
 
             if (itemsToAdd.length > 0) {
@@ -154,7 +186,11 @@ async function scanSystem() {
                 console.log(`[Sync] Added ${itemsToAdd.length} new items`);
                 loadIcons(itemsToAdd, myScanId, myContextId);
                 loadFolderSizes(itemsToAdd, myScanId, myContextId);
-                needsUpdate = true;
+                if (showedCache) {
+                    appendNewItems(itemsToAdd);
+                } else {
+                    needsUpdate = true;
+                }
             }
 
 
@@ -167,12 +203,12 @@ async function scanSystem() {
             }
 
 
-            if (allItems.length > 0) {
+            if (allItems.length > 0 && shouldCache) {
                 scanCache[cacheKey] = [...allItems];
                 dirtyCache.delete(cacheKey);
                 saveScanCacheToDisk();
-            } else {
-                delete scanCache[cacheKey];
+            } else if (!shouldCache) {
+                delete scanCache[cacheKey]; // Ensure no stale trash cache
             }
 
             hideLoadingState();
@@ -187,8 +223,10 @@ async function scanSystem() {
                 resetEmptyState();
                 document.getElementById('emptyState').style.display = 'none';
                 container.style.display = 'grid';
-                if (needsUpdate || !showedCache) {
+                if (!showedCache) {
                     renderItems();
+                } else if (needsUpdate) {
+                    renderItems(true);
                 }
                 updateStats();
             } else {
@@ -326,6 +364,7 @@ async function loadItemsProgressively(myScanId, myContextId, targetArray = null)
                     updateStats();
 
                     loadIcons(batch.items, myScanId, myContextId);
+                    loadFolderSizes(batch.items, myScanId, myContextId);
                 } else if (firstBatch) {
 
                     hideLoadingState();
@@ -345,7 +384,7 @@ async function loadItemsProgressively(myScanId, myContextId, targetArray = null)
         }
     }
 
-    if (runningId === myScanId && activeContextId === myContextId) {
+    if (runningId === myScanId && activeContextId === myContextId && !isIncremental) {
         hideLoadingState();
         renderItems();
         updateStats();
@@ -458,6 +497,12 @@ function startMonitoringForPreset() {
         NSHomeDirectory() + '/.Trash'
     ];
 
+    userFolders.forEach(folder => {
+        if (!pathsToMonitor.includes(folder.path)) {
+            pathsToMonitor.push(folder.path);
+        }
+    });
+
     pywebview.api.start_monitoring(pathsToMonitor).then(() => {
         monitoringEnabled = true;
         monitoredPaths = pathsToMonitor;
@@ -466,22 +511,62 @@ function startMonitoringForPreset() {
     });
 }
 
-async function onFileSystemChange(changedPath) {
-
-    dirtyCache.add('all');
-    dirtyCache.add('desktop');
-    dirtyCache.add('documents');
-    dirtyCache.add('downloads');
-    dirtyCache.add('applications');
-    dirtyCache.add('trash');
-
-    Object.keys(scanCache).forEach(key => delete scanCache[key]);
-
-    await updateCounts();
-
-    if (!isScanning) {
-        await scanSystem();
+function addCustomFolderMonitoring(folderPath) {
+    if (!monitoredPaths.includes(folderPath)) {
+        monitoredPaths.push(folderPath);
+        pywebview.api.start_monitoring(monitoredPaths).catch(error => {
+            console.error('Monitoring error:', error);
+        });
     }
+}
+
+let fsChangeDebounce = null;
+let deleteInProgress = false;
+
+function setDeleteInProgress(value) {
+    deleteInProgress = value;
+    if (value) {
+        setTimeout(() => { deleteInProgress = false; }, 2000);
+    }
+}
+window.setDeleteInProgress = setDeleteInProgress;
+
+async function onFileSystemChange() {
+    if (deleteInProgress) {
+        await updateCounts();
+        return;
+    }
+
+    if (fsChangeDebounce) {
+        clearTimeout(fsChangeDebounce);
+    }
+
+    fsChangeDebounce = setTimeout(async () => {
+        fsChangeDebounce = null;
+
+        if (deleteInProgress) {
+            await updateCounts();
+            return;
+        }
+
+        await updateCounts();
+
+        if (curTab === 'browsers') {
+            return;
+        }
+
+        if (curTab && curTab.startsWith('custom_')) {
+            const folder = userFolders.find(f => f.id === curTab);
+            if (folder && !isScanning) {
+                await navigateToFolder(folder.path, true);
+                return;
+            }
+        }
+
+        if (!isScanning) {
+            await scanSystem();
+        }
+    }, 500);
 }
 
 window.onFileSystemChange = onFileSystemChange;
