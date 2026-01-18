@@ -8,7 +8,7 @@ function getColumnsCount(containerWidth) {
     return Math.max(1, Math.floor((containerWidth + GAP) / (CARD_MIN_WIDTH + GAP)));
 }
 
-function renderItems() {
+function renderItems(skipAnimation = false) {
     const container = document.getElementById('itemsContainer');
     const content = document.querySelector('.content');
 
@@ -40,25 +40,45 @@ function renderItems() {
     }
 
     if (items.length <= 500) {
-        renderAllItems(container);
+        renderAllItems(container, skipAnimation);
     } else {
-        renderVirtualItems(container, content);
+        renderVirtualItems(container, content, skipAnimation);
     }
 }
 
-function renderAllItems(container) {
-    container.innerHTML = '';
-    container.style.height = '';
-    container.style.position = '';
+function appendNewItems(newItems) {
+    const container = document.getElementById('itemsContainer');
+    if (!container || items.length > 500) {
+        console.log('[Append] Falling back to full render');
+        renderItems();
+        return;
+    }
 
+    console.log(`[Append] Appending ${newItems.length} new cards only`);
     const fragment = document.createDocumentFragment();
-    items.forEach((item, index) => {
-        fragment.appendChild(createCardElement(item, index));
+    newItems.forEach(item => {
+        const index = items.indexOf(item);
+        if (index !== -1) {
+            fragment.appendChild(createCardElement(item, index));
+        }
     });
     container.appendChild(fragment);
 }
 
-function renderVirtualItems(container, content) {
+function renderAllItems(container, skipAnimation = false) {
+    container.innerHTML = '';
+    container.style.height = '';
+    container.style.position = '';
+
+    const shouldAnimate = !skipAnimation;
+    const fragment = document.createDocumentFragment();
+    items.forEach((item, index) => {
+        fragment.appendChild(createCardElement(item, index, shouldAnimate));
+    });
+    container.appendChild(fragment);
+}
+
+function renderVirtualItems(container, content, skipAnimation = false) {
     const containerWidth = container.clientWidth || content.clientWidth - 56;
     const viewportHeight = content.clientHeight || window.innerHeight - 200;
     const scrollTop = content.scrollTop || 0;
@@ -91,6 +111,7 @@ function renderVirtualItems(container, content) {
         if (!neededPaths.has(card.dataset.path)) card.remove();
     });
 
+    const shouldAnimate = !skipAnimation;
     const fragment = document.createDocumentFragment();
     const cardWidth = (containerWidth - (columns - 1) * GAP) / columns;
 
@@ -102,7 +123,7 @@ function renderVirtualItems(container, content) {
         let card = existingByPath.get(item.path);
 
         if (!card) {
-            card = createCardElement(item, i);
+            card = createCardElement(item, i, shouldAnimate);
             fragment.appendChild(card);
         } else {
             card.dataset.index = i;
@@ -118,14 +139,15 @@ function renderVirtualItems(container, content) {
     container.appendChild(fragment);
 }
 
-function createCardElement(item, index) {
+function createCardElement(item, index, shouldAnimate = true) {
     const isSelected = selected.has(item.path) ? 'selected' : '';
     const isApp = item.is_app ? 'is-app' : '';
     const protectedClass = item.protected ? 'protected' : '';
+    const animateClass = shouldAnimate ? 'animate-in' : '';
     const iconSrc = item.icon || getDefaultIcon(item.type);
 
     const card = document.createElement('div');
-    card.className = `card ${isSelected} ${isApp} ${protectedClass}`;
+    card.className = `card ${isSelected} ${isApp} ${protectedClass} ${animateClass}`.trim();
     card.dataset.index = index;
     card.dataset.path = item.path;
     card.onclick = (e) => toggleItem(e, parseInt(card.dataset.index));
@@ -134,6 +156,12 @@ function createCardElement(item, index) {
         e.preventDefault();
         openContextMenu(e, item.path, parseInt(card.dataset.index));
     };
+
+    if (shouldAnimate) {
+        card.addEventListener('animationend', () => {
+            card.classList.remove('animate-in');
+        }, { once: true });
+    }
 
     card.innerHTML = `
         <div class="check"></div>
@@ -243,7 +271,7 @@ function updateStats() {
         const loadingState = document.getElementById('loadingState');
         const isLoadingVisible = loadingState && loadingState.classList.contains('show');
 
-        if (isScanning || isLoadingVisible) {
+        if (isLoadingVisible && items.length === 0) {
             deleteBtn.style.display = 'none';
             deleteBtn.disabled = true;
         } else {
@@ -308,6 +336,8 @@ async function performDelete() {
         const isInTrash = curTab === 'trash';
         showProgressAlert('Deleting', 'Processing...');
 
+        setDeleteInProgress(true);
+
         const deletedPaths = Array.from(selected);
         let results = isInTrash
             ? await pywebview.api.permanently_delete(deletedPaths)
@@ -323,8 +353,11 @@ async function performDelete() {
         Object.keys(scanCache).forEach(key => delete scanCache[key]);
         await updateCounts();
 
+        setTimeout(() => setDeleteInProgress(false), 1000);
+
     } catch (error) {
         closeProgressAlert();
         showToast('Failed: ' + error.message, 'error');
+        setDeleteInProgress(false);
     }
 }
