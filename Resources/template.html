@@ -77,12 +77,6 @@
                     </svg>
                 </div>
                 <div class="app-tagline">System Cleanup</div>
-                <div id="updateNotice" class="app-tagline update-link" style="display: none;" onclick="performUpdate()">
-                    Update available: <span id="updateVersion"></span>
-                    <svg viewBox="0 0 24 24" fill="currentColor" width="12" height="12">
-                        <path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/>
-                    </svg>
-                </div>
             </div>
         <div class="sidebar-stats">
             <div class="stat">
@@ -195,6 +189,10 @@
                     Trash
                     <span class="nav-count" id="count-trash">0</span>
                 </div>
+            </div>
+
+            <div class="nav-group">
+                <div class="nav-group-title">Help</div>
                 <div class="nav-item" onclick="switchPreset('help', event)">
                     <span class="nav-icon">
                         <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H8c0-2.21 1.79-4 4-4s4 1.79 4 4c0 .88-.36 1.68-.93 2.25z"/></svg>
