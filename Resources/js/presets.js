@@ -99,7 +99,7 @@ async function addCustomFolder(event) {
             name: folderName
         });
 
-        const container = document.getElementById('userFoldersContainer');
+        const container = document.getElementById('customFoldersContainer');
         const customItem = document.createElement('div');
         customItem.className = 'nav-item';
         customItem.id = folderId;
@@ -119,18 +119,25 @@ async function addCustomFolder(event) {
 
         document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
         customItem.classList.add('active');
+        curTab = folderId;
+        document.getElementById('toolbarTitle').textContent = folderName;
         await navigateToFolder(folderPath);
 
     } catch (error) {
+        console.error('addCustomFolder error:', error);
         const addBtn = event.target.closest('.nav-item');
         if (addBtn) addBtn.blur();
 
-        showAlert('Error', 'Failed to select folder', 'error');
+        showAlert('Error', 'Failed to select folder: ' + error.message, 'error');
     }
 }
 
 function validateCustomFolder(folderPath) {
     const homeDir = NSHomeDirectory();
+
+    if (folderPath === '/' || folderPath === '/Users') {
+        return 'Cannot add system root directories.';
+    }
 
     const alreadyAdded = userFolders.find(f => f.path === folderPath);
     if (alreadyAdded) {
@@ -153,12 +160,6 @@ function validateCustomFolder(folderPath) {
         }
     }
 
-    for (const [presetName, presetPath] of Object.entries(presetPaths)) {
-        if (presetPath.startsWith(folderPath + '/')) {
-            return `This folder contains the preset "${presetName.charAt(0).toUpperCase() + presetName.slice(1).replace('_', ' ')}" folder. Adding parent directories of presets is not recommended.`;
-        }
-    }
-
     return null;
 }
 
@@ -166,7 +167,14 @@ async function navigateToCustomFolder(folderPath, event) {
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
     if (event && event.currentTarget) {
         const navItem = event.currentTarget.closest('.nav-item');
-        if (navItem) navItem.classList.add('active');
+        if (navItem) {
+            navItem.classList.add('active');
+            curTab = navItem.id;
+        }
+    }
+    const folder = userFolders.find(f => f.path === folderPath);
+    if (folder) {
+        document.getElementById('toolbarTitle').textContent = folder.name;
     }
     await navigateToFolder(folderPath);
 }
