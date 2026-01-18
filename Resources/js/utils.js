@@ -70,7 +70,7 @@ function sortItems(sortType) {
         return order === 'desc' ? -comparison : comparison;
     });
 
-    renderItems();
+    renderItems(true); // Skip animation - just rearranging
 }
 
 let searchDebounceTimer = null;
@@ -90,7 +90,7 @@ async function filterItems(q) {
 async function performSearch(q) {
     if (!q || q.trim() === '') {
         items = [...allItems];
-        renderItems();
+        renderItems(true); 
         updateStats();
         return;
     }
@@ -104,7 +104,7 @@ async function performSearch(q) {
     if (mySearchId !== currentSearchId) return;
 
     items = results;
-    renderItems();
+    renderItems(true); 
     updateStats();
 
     const uniqueResults = Array.from(new Map(results.map(r => [r.path, r])).values());
@@ -124,7 +124,7 @@ async function performSearch(q) {
     if (mySearchId !== currentSearchId) return;
 
     items = uniqueResults;
-    renderItems();
+    renderItems(true); 
     updateStats();
 }
 
