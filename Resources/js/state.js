@@ -97,64 +97,58 @@ async function saveScanCacheToDisk() {
 }
 
 async function checkDeleteResult(results, isTrashOperation) {
-
     Object.keys(scanCache).forEach(key => delete scanCache[key]);
 
+    dirtyCache.add('trash');
+    dirtyCache.add(curTab);
+    dirtyCache.add('all');
     if (isTrashOperation) {
-        dirtyCache.add('trash');
         dirtyCache.add('desktop');
         dirtyCache.add('documents');
-        dirtyCache.add('all');
+    }
 
-        await doRescan();
-    } else {
+    const allSuccessful = [
+        ...(results.success || []),
+        ...(results.permanently_deleted || [])
+    ];
 
-        dirtyCache.add('trash');
-        dirtyCache.add(curTab);
-        dirtyCache.add('all');
+    if (allSuccessful.length > 0) {
+        const successBasenames = new Set(allSuccessful.map(p => p.split('/').pop()));
 
-        const allSuccessful = [
-            ...(results.success || []),
-            ...(results.permanently_deleted || [])
-        ];
-
-        if (allSuccessful.length > 0) {
-
-            const successPaths = new Set(allSuccessful);
-            const successBasenames = new Set(allSuccessful.map(p => p.split('/').pop()));
-
-
-            const cardsToRemove = allSuccessful.map(path =>
-                document.querySelector(`[data-path="${CSS.escape(path)}"]`)
-            ).filter(Boolean);
-
-            cardsToRemove.forEach(card => card.classList.add('removing'));
-
-
-            if (cardsToRemove.length > 0) {
-                await new Promise(resolve => setTimeout(resolve, 300));
+        const cardsToRemove = [];
+        document.querySelectorAll('.card[data-path]').forEach(card => {
+            const cardPath = card.getAttribute('data-path');
+            const cardBasename = cardPath.split('/').pop();
+            if (successBasenames.has(cardBasename)) {
+                cardsToRemove.push(card);
             }
+        });
 
-            items = items.filter(item => {
-                const basename = item.path.split('/').pop();
-                return !successPaths.has(item.path) && !successBasenames.has(basename);
-            });
+        cardsToRemove.forEach(card => card.classList.add('removing'));
 
-            allItems = allItems.filter(item => {
-                const basename = item.path.split('/').pop();
-                return !successPaths.has(item.path) && !successBasenames.has(basename);
-            });
-
-            selected.clear();
-
-            if (items.length === 0) {
-                document.getElementById('itemsContainer').style.display = 'none';
-                showEmptyState();
-            } else {
-                renderItems();
-            }
-            updateStats();
+        if (cardsToRemove.length > 0) {
+            await new Promise(resolve => setTimeout(resolve, 300));
         }
+
+        items = items.filter(item => {
+            const basename = item.path.split('/').pop();
+            return !successBasenames.has(basename);
+        });
+
+        allItems = allItems.filter(item => {
+            const basename = item.path.split('/').pop();
+            return !successBasenames.has(basename);
+        });
+
+        selected.clear();
+
+        if (items.length === 0) {
+            document.getElementById('itemsContainer').style.display = 'none';
+            showEmptyState();
+        } else {
+            cardsToRemove.forEach(card => card.remove());
+        }
+        updateStats();
     }
 
     const allDeleted = [
@@ -177,15 +171,46 @@ async function checkRestoreResult(restoredPaths, results) {
     dirtyCache.add('desktop');
     dirtyCache.add('all');
 
-    await doRescan();
+    const allSuccessful = results.success || [];
 
-    if (results.success) {
-        for (const path of results.success) {
-            const stillInTrash = items.find(item => item.path === path);
-            if (stillInTrash) {
-                return `File still in trash after successful restore: ${path}`;
+    if (allSuccessful.length > 0) {
+        const successPaths = new Set(allSuccessful);
+        const successBasenames = new Set(allSuccessful.map(p => p.split('/').pop()));
+
+        const cardsToRemove = [];
+        document.querySelectorAll('.card[data-path]').forEach(card => {
+            const cardPath = card.getAttribute('data-path');
+            const cardBasename = cardPath.split('/').pop();
+            if (successPaths.has(cardPath) || successBasenames.has(cardBasename)) {
+                cardsToRemove.push(card);
             }
+        });
+
+        cardsToRemove.forEach(card => card.classList.add('removing'));
+
+        if (cardsToRemove.length > 0) {
+            await new Promise(resolve => setTimeout(resolve, 300));
         }
+
+        items = items.filter(item => {
+            const basename = item.path.split('/').pop();
+            return !successPaths.has(item.path) && !successBasenames.has(basename);
+        });
+
+        allItems = allItems.filter(item => {
+            const basename = item.path.split('/').pop();
+            return !successPaths.has(item.path) && !successBasenames.has(basename);
+        });
+
+        selected.clear();
+
+        if (items.length === 0) {
+            document.getElementById('itemsContainer').style.display = 'none';
+            showEmptyState();
+        } else {
+            cardsToRemove.forEach(card => card.remove());
+        }
+        updateStats();
     }
 
     return null;
