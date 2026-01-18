@@ -281,3 +281,4 @@ class IconExtractor {
         return result
     }
 }
+
