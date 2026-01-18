@@ -1,3 +1,25 @@
+.update-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 4px;
+    font-size: 11px;
+    color: var(--text-tertiary);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.update-link:hover {
+    color: var(--text-secondary);
+}
+
+.update-link svg {
+    opacity: 0.7;
+}
+
 .toolbar {
     height: 64px;
     background: rgba(26, 26, 26, 0.8);
