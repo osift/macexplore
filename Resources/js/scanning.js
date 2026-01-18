@@ -486,8 +486,18 @@ async function onFileSystemChange(changedPath) {
 
 window.onFileSystemChange = onFileSystemChange;
 
+let cachedHomeDir = null;
+
 function NSHomeDirectory() {
-    return '/Users/' + (window.location.pathname.split('/')[2] || 'user');
+    return cachedHomeDir || '/Users/user';
+}
+
+async function initHomeDirectory() {
+    try {
+        cachedHomeDir = await pywebview.api.get_home_directory();
+    } catch (e) {
+        cachedHomeDir = '/Users/' + (window.location.pathname.split('/')[2] || 'user');
+    }
 }
 
 
