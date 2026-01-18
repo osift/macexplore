@@ -146,9 +146,9 @@ async function initializeCaches() {
 
         await Promise.all([
             loadSizeCache(),
-            loadIconCacheFromDisk(),
-            loadScanCacheFromDisk()
+            loadIconCacheFromDisk()
         ]);
+        await loadScanCacheFromDisk();
         console.log('[Init] All caches loaded');
     } catch (e) {
         console.warn('[Init] Error loading caches:', e);
@@ -172,4 +172,3 @@ function waitForAPI() {
     }
 }
 window.addEventListener('DOMContentLoaded', waitForAPI);
-//cmmsg
