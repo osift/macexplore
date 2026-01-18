@@ -164,16 +164,23 @@
 }
 
 .nav-remove {
+    position: absolute;
+    right: 12px;
     opacity: 0;
     font-size: 18px;
     color: var(--text-tertiary);
     cursor: pointer;
-    padding: 0 8px;
+    padding: 0 4px;
     transition: all 0.2s;
+    background: var(--bg-secondary);
 }
 
 .nav-item:hover .nav-remove {
     opacity: 1;
+}
+
+.nav-item:has(.nav-remove):hover .nav-count {
+    opacity: 0;
 }
 
 .nav-remove:hover {
