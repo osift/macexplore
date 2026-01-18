@@ -8,10 +8,15 @@ async function navigateToFolder(folderPath, isCustomRoot = false) {
         }
 
         let myContextId;
+        let myScanId;
         if (!isSameFolder) {
             myContextId = resetState('folder');
+            scanId++;
+            myScanId = scanId;
+            runningId = myScanId;
         } else {
             myContextId = activeContextId;
+            myScanId = runningId;
         }
         curPath = folderPath;
 
@@ -21,13 +26,18 @@ async function navigateToFolder(folderPath, isCustomRoot = false) {
         const container = document.getElementById('itemsContainer');
 
         if (cachedItems && cachedItems.length > 0 && !isSameFolder) {
-            items = [...cachedItems];
+            items = cachedItems.map(item => {
+                if (item.type === 'Folder') {
+                    return { ...item, needs_size: true };  // Keep size_str for display
+                }
+                return { ...item };
+            });
             allItems = [...items];
 
             hideLoadingState();
             resetEmptyState();
             container.style.display = 'grid';
-            renderItems(true);  // No animation for cached display
+            renderItems(true);  
             updateStats();
             showedCache = true;
         } else if (isSameFolder && items.length > 0) {
@@ -47,7 +57,6 @@ async function navigateToFolder(folderPath, isCustomRoot = false) {
             ...item,
             icon: getDefaultIcon(item.type),
             category: 'Folder View',
-            is_app: false,
             protected: isSysPath(item.path)
         }));
 
@@ -72,6 +81,13 @@ async function navigateToFolder(folderPath, isCustomRoot = false) {
                     cardsToRemove.forEach(card => card.remove());
                 }
 
+                pathsToRemove.forEach(path => {
+                    delete iconCacheData[path];
+                    delete sizeCache[path];
+                });
+                saveIconCacheToDisk();
+                saveSizeCache();
+
                 items = items.filter(item => !pathsToRemove.includes(item.path));
                 allItems = allItems.filter(item => !pathsToRemove.includes(item.path));
             }
@@ -80,7 +96,8 @@ async function navigateToFolder(folderPath, isCustomRoot = false) {
                 items.push(...itemsToAdd);
                 allItems.push(...itemsToAdd);
                 appendNewItems(itemsToAdd);
-                loadFolderSizes(itemsToAdd, runningId, myContextId);
+                loadIcons(itemsToAdd, myScanId, myContextId);
+                loadFolderSizes(itemsToAdd, myScanId, myContextId);
             }
 
             updateStats();
@@ -100,6 +117,7 @@ async function navigateToFolder(folderPath, isCustomRoot = false) {
 
             renderItems(true);  // Skip animation for initial load
             updateStats();
+            loadIcons(items, myScanId, myContextId);
         }
 
         if (items.length > 0) {
@@ -115,7 +133,7 @@ async function navigateToFolder(folderPath, isCustomRoot = false) {
             hideBackButton();
         }
 
-        loadFolderSizes(items, runningId, myContextId);
+        loadFolderSizes(items, myScanId, myContextId);
 
     } catch (error) {
         hideLoadingState();
@@ -158,7 +176,7 @@ function navigateBack() {
         resetEmptyState();
         document.getElementById('itemsContainer').style.display = 'grid';
 
-        renderItems(true);  // Skip animation for back navigation
+        renderItems(true);  
         updateStats();
 
         if (navHistory.length === 0) {
