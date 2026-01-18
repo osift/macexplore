@@ -119,8 +119,13 @@ async function scanSystem() {
             const isSameData = existingPaths.size === cachedPaths.size &&
                 [...existingPaths].every(p => cachedPaths.has(p));
 
-            items = [...cachedItems];
-            allItems = [...cachedItems];
+            items = cachedItems.map(item => {
+                if (item.type === 'Folder') {
+                    return { ...item, needs_size: true };  // Keep size_str for display
+                }
+                return { ...item };
+            });
+            allItems = [...items];
 
             hideLoadingState();
             resetEmptyState();
@@ -135,6 +140,8 @@ async function scanSystem() {
             }
             updateStats();
             showedCache = true;
+
+            loadFolderSizes(items, myScanId, myContextId);
 
             await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
         } else {
@@ -173,6 +180,13 @@ async function scanSystem() {
                     await new Promise(resolve => setTimeout(resolve, 300));
                     cardsToRemove.forEach(card => card.remove());
                 }
+
+                pathsToRemove.forEach(path => {
+                    delete iconCacheData[path];
+                    delete sizeCache[path];
+                });
+                saveIconCacheToDisk();
+                saveSizeCache();
 
                 items = items.filter(item => !pathsToRemove.includes(item.path));
                 allItems = allItems.filter(item => !pathsToRemove.includes(item.path));
@@ -549,9 +563,18 @@ async function onFileSystemChange() {
             return;
         }
 
+        for (const monitoredPath of monitoredPaths) {
+            invalidateSizeCacheForPath(monitoredPath);
+        }
+
         await updateCounts();
 
         if (curTab === 'browsers') {
+            return;
+        }
+
+        if (navHistory.length > 0 && curPath && !isScanning) {
+            await navigateToFolder(curPath, false);
             return;
         }
 
@@ -600,8 +623,7 @@ async function loadFolderSizes(itemBatch, myScanId, myContextId) {
         if (!item.needs_size && item.size_str !== 'Loading...') continue;
 
         try {
-
-            const cachedSize = getCachedSize(item.path);
+            const cachedSize = item.needs_size ? null : getCachedSize(item.path);
             let sizeData;
 
             if (cachedSize) {
