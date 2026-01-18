@@ -12,7 +12,7 @@ function openContextMenu(event, path, index) {
     if (!selected.has(path)) {
         selected.clear();
         selected.add(path);
-        renderItems();
+        refreshSelection();
         updateStats();
     }
 
