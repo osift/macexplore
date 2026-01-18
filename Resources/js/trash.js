@@ -15,6 +15,8 @@ async function restoreSelected() {
 
             showProgressAlert('Restoring Items', `Restoring ${itemCount} ${itemText}...`);
 
+            setDeleteInProgress(true);
+
             const result = await pywebview.api.restore_from_trash(restoredPaths);
 
             closeProgressAlert();
@@ -45,6 +47,9 @@ async function restoreSelected() {
                 });
             }
 
+            await updateCounts();
+            setTimeout(() => setDeleteInProgress(false), 1000);
+
             if (verificationWarning) {
                 showAlert('Verification Failed', message.trim(), 'error');
             } else if (result.failed && result.failed.length > 0) {
@@ -57,6 +62,7 @@ async function restoreSelected() {
         } catch (error) {
             closeProgressAlert();
             showToast('Failed to restore: ' + error.message, 'error');
+            setDeleteInProgress(false);
         }
     });
 }
@@ -84,6 +90,8 @@ async function restoreAll() {
     try {
         showProgressAlert('Restoring All', `Restoring ${itemCount} items...`);
 
+        setDeleteInProgress(true);
+
         const result = await pywebview.api.restore_from_trash(allPaths);
 
         closeProgressAlert();
@@ -109,6 +117,8 @@ async function restoreAll() {
         }
 
         updateStats();
+        await updateCounts();
+        setTimeout(() => setDeleteInProgress(false), 1000);
 
         if (verificationWarning) {
             showAlert('Verification Failed', message.trim(), 'error');
@@ -121,6 +131,7 @@ async function restoreAll() {
 
     } catch (error) {
         closeProgressAlert();
+        setDeleteInProgress(false);
         showToast('Failed to restore: ' + error.message, 'error');
     }
 }
@@ -138,15 +149,45 @@ async function emptyTrash() {
     try {
         showProgressAlert('Emptying Trash', `Deleting ${itemCount} items...`);
 
+        setDeleteInProgress(true);
+
         const result = await pywebview.api.empty_trash();
 
         closeProgressAlert();
 
-        await doRescan();
+        Object.keys(scanCache).forEach(key => delete scanCache[key]);
+        dirtyCache.add('trash');
+        dirtyCache.add('all');
 
-        if (items.length > 0) {
-            showAlert('Warning', `Trash still contains ${items.length} item${items.length !== 1 ? 's' : ''}. Some items may be protected or in use.`, 'warning');
+        const allCards = document.querySelectorAll('.card[data-path]');
+        allCards.forEach(card => card.classList.add('removing'));
+
+        if (allCards.length > 0) {
+            await new Promise(resolve => setTimeout(resolve, 300));
+        }
+
+        items.length = 0;
+        allItems.length = 0;
+        selected.clear();
+
+        allCards.forEach(card => card.remove());
+
+        const trashItems = await pywebview.api.scan_trash();
+        const remainingCount = trashItems ? trashItems.length : 0;
+
+        if (remainingCount > 0) {
+            items.push(...trashItems);
+            allItems.push(...trashItems);
+            trashItems.forEach(item => {
+                item.icon = getDefaultIcon(item.type);
+                item.protected = isSysPath(item.path);
+            });
+            renderItems();
+            showAlert('Warning', `Trash still contains ${remainingCount} item${remainingCount !== 1 ? 's' : ''}. Some items may be protected or in use.`, 'warning');
         } else {
+            document.getElementById('itemsContainer').style.display = 'none';
+            showEmptyState();
+
             const normalCount = result.success || 0;
             const privilegedCount = result.privileged || 0;
             const totalCount = normalCount + privilegedCount;
@@ -157,9 +198,16 @@ async function emptyTrash() {
                 showToast(`Deleted ${totalCount || itemCount} item${(totalCount || itemCount) !== 1 ? 's' : ''} permanently`, 'success');
             }
         }
+
+        updateStats();
+        await updateCounts();
+
+        setTimeout(() => setDeleteInProgress(false), 1000);
+
     } catch (error) {
         closeProgressAlert();
         showToast('Failed to empty trash: ' + error.message, 'error');
+        setDeleteInProgress(false);
     }
 }
 
