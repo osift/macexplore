@@ -63,6 +63,8 @@ function getCardsInDragBox(startX, startY, endX, endY) {
 }
 
 document.addEventListener('mousedown', (e) => {
+    if (curTab === 'help') return;
+
     const inContentArea = e.target.closest('.content') &&
                           !e.target.closest('.toolbar') &&
                           !e.target.closest('.search');
