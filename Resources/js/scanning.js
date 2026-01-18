@@ -10,7 +10,7 @@ function showLoadingState(estimatedCount) {
     }
 
     loadingState.innerHTML = html;
-    loadingState.style.display = 'grid'; 
+    loadingState.style.display = 'grid';
     loadingState.classList.add('show');
 }
 
@@ -46,13 +46,9 @@ async function scanSystem() {
     }
 
     const cacheKey = curTab + (curPath || '');
-    delete scanCache[cacheKey];
 
     const searchInput = document.getElementById('searchInput');
     const currentSearchQuery = searchInput ? searchInput.value : '';
-
-    const existingPaths = new Set(allItems.map(item => item.path));
-    const hasExistingItems = allItems.length > 0;
 
     scanId++;
     const myScanId = scanId;
@@ -63,14 +59,14 @@ async function scanSystem() {
 
     updateStats();
 
-    if (!hasExistingItems && !currentSearchQuery) {
-        showLoadingState(8);
-        document.getElementById('itemsContainer').style.display = 'none';
-        const browsersView = document.getElementById('browsersView');
-        if (browsersView) browsersView.style.display = 'none';
-    }
+
+    showLoadingState(8);
+    document.getElementById('itemsContainer').style.display = 'none';
+    const browsersView = document.getElementById('browsersView');
+    if (browsersView) browsersView.style.display = 'none';
 
     try {
+
         const startData = await pywebview.api.start_scan(curTab);
 
         if (runningId !== myScanId || activeContextId !== myContextId) {
@@ -78,18 +74,41 @@ async function scanSystem() {
             return;
         }
 
+
         if (!startData || !startData.started) {
             hideLoadingState();
+            delete scanCache[cacheKey];
+
             if (curTab === 'trash') {
                 showPermissionNotice();
             } else {
                 showEmptyState();
             }
+
             isScanning = false;
             return;
         }
 
-        if (startData.total !== undefined) {
+
+        const cachedItems = scanCache[cacheKey];
+        let showedCache = false;
+
+        if (cachedItems && cachedItems.length > 0) {
+            items = [...cachedItems];
+            allItems = [...cachedItems];
+
+            hideLoadingState();
+            resetEmptyState();
+            const container = document.getElementById('itemsContainer');
+            container.style.display = 'grid';
+            renderItems();
+            updateStats();
+            showedCache = true;
+            console.log(`[Cache] Showing ${cachedItems.length} cached items for ${cacheKey}`);
+
+
+            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        } else if (startData.total !== undefined) {
             showLoadingState(startData.total);
         }
 
@@ -98,47 +117,62 @@ async function scanSystem() {
 
         if (runningId === myScanId && activeContextId === myContextId) {
 
-            if (hasExistingItems && scannedItems.length > 0) {
-                const scannedPaths = new Set(scannedItems.map(item => item.path));
 
-                const pathsToRemove = Array.from(existingPaths).filter(path => !scannedPaths.has(path));
+            const currentPaths = new Set(allItems.map(item => item.path));
+            const scannedPaths = new Set(scannedItems.map(item => item.path));
 
-                const pathsToAdd = scannedItems.filter(item => !existingPaths.has(item.path));
 
-                let updatedItems = [...allItems];
+            const pathsToRemove = Array.from(currentPaths).filter(path => !scannedPaths.has(path));
 
-                if (pathsToRemove.length > 0) {
-                    updatedItems = updatedItems.filter(item => !pathsToRemove.includes(item.path));
-                    console.log(`Removed ${pathsToRemove.length} deleted files from display`);
+
+            const itemsToAdd = scannedItems.filter(item => !currentPaths.has(item.path));
+
+            let needsUpdate = false;
+
+            if (pathsToRemove.length > 0) {
+
+                const cardsToRemove = pathsToRemove.map(path =>
+                    document.querySelector(`[data-path="${CSS.escape(path)}"]`)
+                ).filter(Boolean);
+
+                cardsToRemove.forEach(card => card.classList.add('removing'));
+
+
+                if (cardsToRemove.length > 0) {
+                    await new Promise(resolve => setTimeout(resolve, 300));
                 }
 
-                if (pathsToAdd.length > 0) {
-                    updatedItems.push(...pathsToAdd);
-                    console.log(`Added ${pathsToAdd.length} new files to display`);
-                }
+                items = items.filter(item => !pathsToRemove.includes(item.path));
+                allItems = allItems.filter(item => !pathsToRemove.includes(item.path));
+                console.log(`[Sync] Removed ${pathsToRemove.length} deleted items`);
+                needsUpdate = true;
+            }
 
-                items = updatedItems;
-                allItems = updatedItems;
+            if (itemsToAdd.length > 0) {
+                items.push(...itemsToAdd);
+                allItems.push(...itemsToAdd);
+                console.log(`[Sync] Added ${itemsToAdd.length} new items`);
+                loadIcons(itemsToAdd, myScanId, myContextId);
+                loadFolderSizes(itemsToAdd, myScanId, myContextId);
+                needsUpdate = true;
+            }
 
-                if (pathsToAdd.length > 0) {
 
-                    loadIcons(pathsToAdd, myScanId, myContextId);
-                }
-            } else if (scannedItems.length > 0) {
-
+            if (!showedCache && scannedItems.length > 0) {
                 items = scannedItems;
                 allItems = scannedItems;
-
                 loadIcons(scannedItems, myScanId, myContextId);
-            } else {
-
-                items = [];
-                allItems = [];
+                loadFolderSizes(scannedItems, myScanId, myContextId);
+                needsUpdate = true;
             }
+
 
             if (allItems.length > 0) {
                 scanCache[cacheKey] = [...allItems];
                 dirtyCache.delete(cacheKey);
+                saveScanCacheToDisk();
+            } else {
+                delete scanCache[cacheKey];
             }
 
             hideLoadingState();
@@ -147,20 +181,18 @@ async function scanSystem() {
                 await performSearch(currentSearchQuery);
             }
 
+
+            const container = document.getElementById('itemsContainer');
             if (items.length > 0) {
                 resetEmptyState();
-                const container = document.getElementById('itemsContainer');
-
-                container.style.opacity = '0';
+                document.getElementById('emptyState').style.display = 'none';
                 container.style.display = 'grid';
-                renderItems();
+                if (needsUpdate || !showedCache) {
+                    renderItems();
+                }
                 updateStats();
-
-                requestAnimationFrame(() => {
-                    container.style.opacity = '1';
-                });
             } else {
-                document.getElementById('itemsContainer').style.display = 'none';
+                container.style.display = 'none';
                 showEmptyState();
             }
         }
@@ -242,7 +274,7 @@ async function loadItemsProgressively(myScanId, myContextId, targetArray = null)
 
             if (runningId !== myScanId || activeContextId !== myContextId) {
                 console.log('Batch loading cancelled - context switched');
-                hideLoadingState(); 
+                hideLoadingState();
                 return;
             }
 
@@ -260,7 +292,7 @@ async function loadItemsProgressively(myScanId, myContextId, targetArray = null)
 
                 if (activeContextId !== myContextId) {
                     console.log('Context switched - discarding batch');
-                    hideLoadingState(); 
+                    hideLoadingState();
                     return;
                 }
 
@@ -336,25 +368,39 @@ async function loadItemsProgressively(myScanId, myContextId, targetArray = null)
 }
 
 async function loadIcons(itemBatch, myScanId, myContextId) {
-    for (let item of itemBatch) {
+    let needsSave = false;
 
+    for (let item of itemBatch) {
         if (runningId !== myScanId || activeContextId !== myContextId) {
             console.log('Icon loading cancelled - context switched');
+            if (needsSave) saveIconCacheToDisk();
             return;
         }
 
         try {
             let icon;
-            if (item.is_app) {
-                icon = await pywebview.api.extract_app_icon(item.path);
-            } else if (item.type === 'Folder') {
-                icon = await pywebview.api.get_folder_icon(item.path);
+
+
+            if (iconCacheData[item.path]) {
+                icon = iconCacheData[item.path];
             } else {
-                icon = await pywebview.api.get_file_icon(item.path);
+
+                if (item.is_app) {
+                    icon = await pywebview.api.extract_app_icon(item.path);
+                } else if (item.type === 'Folder') {
+                    icon = await pywebview.api.get_folder_icon(item.path);
+                } else {
+                    icon = await pywebview.api.get_file_icon(item.path);
+                }
+
+
+                iconCacheData[item.path] = icon;
+                needsSave = true;
             }
 
             if (runningId !== myScanId || activeContextId !== myContextId) {
                 console.log('Icon loaded but context switched - discarding');
+                if (needsSave) saveIconCacheToDisk();
                 return;
             }
 
@@ -372,6 +418,10 @@ async function loadIcons(itemBatch, myScanId, myContextId) {
         } catch (error) {
             console.error(`Error loading icon for ${item.name}:`, error);
         }
+    }
+
+    if (needsSave) {
+        saveIconCacheToDisk();
     }
 }
 
@@ -438,4 +488,58 @@ window.onFileSystemChange = onFileSystemChange;
 
 function NSHomeDirectory() {
     return '/Users/' + (window.location.pathname.split('/')[2] || 'user');
+}
+
+
+async function loadFolderSizes(itemBatch, myScanId, myContextId) {
+    let needsSave = false;
+
+    for (let item of itemBatch) {
+
+        if (runningId !== myScanId || activeContextId !== myContextId) {
+            if (needsSave) saveSizeCache();
+            return;
+        }
+
+
+        if (!item.needs_size && item.size_str !== 'Loading...') continue;
+
+        try {
+
+            const cachedSize = getCachedSize(item.path);
+            let sizeData;
+
+            if (cachedSize) {
+                sizeData = cachedSize;
+            } else {
+
+                const result = await pywebview.api.get_item_size(item.path);
+                sizeData = typeof result === 'string' ? JSON.parse(result) : result;
+
+
+                sizeCache[item.path] = sizeData;
+                needsSave = true;
+            }
+
+
+            item.size = sizeData.size;
+            item.size_str = sizeData.size_str;
+            item.needs_size = false;
+
+
+            const card = document.querySelector(`[data-path="${CSS.escape(item.path)}"]`);
+            if (card) {
+                const metaEl = card.querySelector('.card-meta');
+                if (metaEl) {
+                    metaEl.textContent = sizeData.size_str;
+                }
+            }
+        } catch (error) {
+            console.error(`Error loading size for ${item.name}:`, error);
+        }
+    }
+
+    if (needsSave) {
+        saveSizeCache();
+    }
 }
