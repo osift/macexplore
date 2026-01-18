@@ -112,3 +112,4 @@ struct DiskSpaceInfo {
     let total: String
     let percentUsed: Double
 }
+
