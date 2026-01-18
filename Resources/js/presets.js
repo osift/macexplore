@@ -31,7 +31,7 @@ function switchPreset(preset, event) {
         'all': 'All Items', 'applications': 'Applications', 'desktop': 'Desktop',
         'documents': 'Documents', 'downloads': 'Downloads',
         'launch_agents': 'Launch Agents', 'binaries': 'Binaries',
-        'browsers': 'Browser Data', 'trash': 'Trash'
+        'browsers': 'Browser Data', 'trash': 'Trash', 'help': 'Help'
     };
 
     let title = titles[preset];
@@ -47,15 +47,28 @@ function switchPreset(preset, event) {
         searchInput.value = '';
     }
 
-    updateCounts();
 
-    if (preset === 'browsers') {
+    const browsersView = document.getElementById('browsersView');
+    const helpView = document.getElementById('helpView');
+    const itemsContainer = document.getElementById('itemsContainer');
+    const emptyState = document.getElementById('emptyState');
+
+    if (browsersView) browsersView.style.display = 'none';
+    if (helpView) helpView.style.display = 'none';
+
+    if (preset === 'help') {
+
+        if (itemsContainer) itemsContainer.style.display = 'none';
+        if (emptyState) emptyState.style.display = 'none';
+        if (helpView) helpView.style.display = 'block';
+        hideLoadingState();
+    } else if (preset === 'browsers') {
+        if (itemsContainer) itemsContainer.style.display = 'grid';
+        updateCounts();
         loadBrowsers();
     } else {
-        const browsersView = document.getElementById('browsersView');
-        if (browsersView) {
-            browsersView.style.display = 'none';
-        }
+        if (itemsContainer) itemsContainer.style.display = 'grid';
+        updateCounts();
         scanSystem();
     }
 
@@ -200,6 +213,14 @@ function updateToolbarForPreset() {
     if (existingEmptyTrash) existingEmptyTrash.remove();
     if (existingDeletePermanent) existingDeletePermanent.remove();
 
+
+    if (curTab === 'help') {
+        if (toolbarActions) toolbarActions.style.display = 'none';
+        return;
+    } else {
+        if (toolbarActions) toolbarActions.style.display = 'flex';
+    }
+
     if (curTab === 'trash') {
 
         if (deleteBtn) deleteBtn.style.display = 'none';
@@ -208,14 +229,14 @@ function updateToolbarForPreset() {
         deletePermanentBtn.id = 'deletePermanentBtn';
         deletePermanentBtn.className = 'btn';
         deletePermanentBtn.textContent = 'Delete';
-        deletePermanentBtn.style.display = 'none'; 
-        deletePermanentBtn.onclick = deleteSelected; 
+        deletePermanentBtn.style.display = 'none';
+        deletePermanentBtn.onclick = deleteSelected;
 
         const restoreBtn = document.createElement('button');
         restoreBtn.id = 'restoreBtn';
         restoreBtn.className = 'btn';
         restoreBtn.textContent = 'Restore';
-        restoreBtn.style.display = 'none'; 
+        restoreBtn.style.display = 'none';
         restoreBtn.onclick = restoreSelected;
 
         const restoreAllBtn = document.createElement('button');
